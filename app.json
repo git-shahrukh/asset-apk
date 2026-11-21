@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "asset-app",
+    "name": "Asset Management",
     "slug": "asset-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.endureva.assetapp"
     },
     "android": {
+      "package": "com.endureva.assetapp",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1D4ED8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -20,6 +22,17 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+       ["expo-image-picker", { "cameraPermission": "Allow camera to take photos for attachments" }],
+  ["expo-location", { "locationWhenInUsePermission": "Allow location to tag photos with where they were taken" }]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "236e2a68-822c-4998-993f-9734e3ad7977"
+      }
     }
   }
 }
