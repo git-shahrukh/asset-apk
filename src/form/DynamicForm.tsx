@@ -10,7 +10,7 @@ import { TEXT_MAX_LENGTH, UnsupportedField, fieldComponents } from './fieldCompo
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Platform } from 'react-native';
 import { ScanError, scanText } from '../utils/scanText';
-  
+import { parseScan } from '../services/parseScan';
 const NUMBER_PATTERN = /^-?\d+(\.\d+)?$/;
 const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -181,11 +181,20 @@ const scanLabel = async () => {
   setScanning(true);
   try {
     const scan = await scanText();
-    if (!scan) return; // user cancelled
-    console.log('OCR full text:\n', scan.text);
-    console.log('OCR lines:', JSON.stringify(scan.lines, null, 2));
-    console.log('Form fields:', fields.map((f) => `${f.label} (${f.type})`));
-    showPopup('Scanned text', scan.text || 'Nothing was read. Try again with better light.');
+    if (!scan) return;
+
+    const parsed = parseScan(scan.lines, fields);
+    console.log('MATCHED:', parsed.values, '| description field id:', parsed.descriptionId);
+
+    const opts = { shouldDirty: true, shouldTouch: true, shouldValidate: true };
+    for (const [id, value] of Object.entries(parsed.values)) setValue(id, value, opts);
+
+    if (parsed.description && parsed.descriptionId) {
+      setValue(parsed.descriptionId, parsed.description, opts);
+    }
+    if (!Object.keys(parsed.values).length) {
+      showPopup('Nothing matched', 'No labels recognised. Unmatched text went to Description.');
+    }
   } catch (e) {
     showPopup('Scan failed', e instanceof ScanError ? e.message : String(e));
   } finally {
