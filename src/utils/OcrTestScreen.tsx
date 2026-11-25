@@ -154,8 +154,7 @@ export default function OcrTestScreen() {
       );
       setLines(found);
 
-      console.log('OCR full text:\n', result.text);
-      console.log('OCR parsed:', parsed);
+      if (__DEV__) console.log('OCR parsed field names:', Object.keys(parsed));
     } catch (e) {
       showPopup('Scan failed', String(e));
     } finally {

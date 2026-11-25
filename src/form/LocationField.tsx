@@ -1,4 +1,3 @@
-// import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // import { Platform, StyleSheet, Text, View } from 'react-native';
 // import { WebView } from 'react-native-webview';
 // // import { reverseGeocode, searchPlace } from '../api/endpoints';
@@ -164,6 +163,20 @@ interface Pin {
   lng: number;
 }
 
+function parsePinMessage(raw: string): Pin | null {
+  try {
+    const value = JSON.parse(raw) as { lat?: unknown; lng?: unknown };
+    if (
+      typeof value.lat !== 'number' || typeof value.lng !== 'number' ||
+      !Number.isFinite(value.lat) || !Number.isFinite(value.lng) ||
+      value.lat < -90 || value.lat > 90 || value.lng < -180 || value.lng > 180
+    ) return null;
+    return { lat: value.lat, lng: value.lng };
+  } catch {
+    return null;
+  }
+}
+
 const EMPTY: Place = { location: '', latitude: null, longitude: null };
 const START = { lat: 20.5937, lng: 78.9629, zoom: 4 }; // ADJUST: where the map opens
 const FOUND_ZOOM = 16;
@@ -180,7 +193,9 @@ function MapFrame({ html, onPin }: { html: string; onPin: (pin: Pin) => void }) 
   useEffect(() => {
     if (!frame) return;
     const listener = (event: MessageEvent) => {
-      if (event.source === frame.contentWindow) onPin(JSON.parse(event.data));
+      if (event.source !== frame.contentWindow) return;
+      const pin = parsePinMessage(event.data);
+      if (pin) onPin(pin);
     };
     window.addEventListener('message', listener);
     return () => window.removeEventListener('message', listener);
@@ -196,7 +211,10 @@ function MapFrame({ html, onPin }: { html: string; onPin: (pin: Pin) => void }) 
       source={{ html, baseUrl: 'https://endureva.cloud' }}
       originWhitelist={['*']}
       nestedScrollEnabled // lets the map take the drag instead of the form's scroll
-      onMessage={(event) => onPin(JSON.parse(event.nativeEvent.data))}
+       onMessage={(event) => {
+         const pin = parsePinMessage(event.nativeEvent.data);
+         if (pin) onPin(pin);
+       }}
     />
   );
 }

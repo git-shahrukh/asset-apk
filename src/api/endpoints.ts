@@ -173,7 +173,7 @@ function onlyFilled(values: FormValues): FormValues {
 // A browser file's uri can be megabytes of text, so the log shows only its name.
 function logPayload(blockId: string, filled: FormValues) {
   const text = JSON.stringify(filled, (_key, value) => (isPickedFile(value) ? `file: ${value.name}` : value), 2);
-  console.log(`POST ${PATHS.createRecord(blockId)} payload:`, text);
+  if (__DEV__) console.log(`POST ${PATHS.createRecord(blockId)} payload:`, text);
 }
 
 //save new records in block

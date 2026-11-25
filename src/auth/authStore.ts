@@ -38,7 +38,9 @@ export const useAuth = create<AuthState>((set) => ({
       set({ status: 'signedIn', user: session.user });
     } catch (e) {
       // Unreadable storage must never block the app: just show Login.
-      console.warn('Could not restore session', e);
+      if (__DEV__) console.warn('Could not restore session', e);
+      await tokenStorage.clear();
+      await storage.remove(SESSION_KEY);
       set({ status: 'signedOut', user: null });
     }
   },

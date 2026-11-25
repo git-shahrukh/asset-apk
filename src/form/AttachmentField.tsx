@@ -1,31 +1,3 @@
-// import { getDocumentAsync } from 'expo-document-picker';
-// import { PickedFile } from '../api/types';
-// import { PickerButton } from '../components/ui';
-// import type { FieldProps } from './fieldComponents';
-
-// export function AttachmentField({ field, value, onChange, onBlur, hasError }: FieldProps) {
-//   const file: PickedFile | '' = value;
-
-//   const pick = async () => {
-//     const result = await getDocumentAsync({ type: '*/*', base64: false });
-//     if (!result.canceled) {
-//       const { uri, name, mimeType, file: webFile } = result.assets[0];
-//       onChange({ uri, name, mimeType, file: webFile });
-//     }
-//     onBlur();
-//   };
-
-//   return (
-//     <PickerButton
-//       text={file ? file.name : ''}
-//       placeholder={`Choose ${field.label}`}
-//       onPress={pick}
-//       onClear={() => { onChange(''); onBlur(); }}
-//       hasError={hasError}
-//     />
-//   );
-// }
-
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getDocumentAsync } from 'expo-document-picker';

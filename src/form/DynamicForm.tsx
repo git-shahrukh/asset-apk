@@ -96,7 +96,10 @@ function fieldSchema(field: Field) {
 
 
     default:
-      return null; // unsupported type: not validated and not submitted
+      // Do not allow a required backend field to disappear silently.
+      return field.required
+        ? z.any().refine(() => false, `${field.label} uses unsupported field type "${field.type}"`)
+        : null;
   }
 }
 
@@ -225,7 +228,7 @@ const scanLabel = async () => {
     for (const [id, value] of Object.entries(filled)) {
       setValue(id, value, { shouldValidate: true, shouldDirty: true });
     }
-    console.log('OCR filled:', filled);
+    if (__DEV__) console.log('OCR filled field ids:', Object.keys(filled));
 
     const count = Object.keys(filled).length;
     showPopup('Scan complete', `${count} field(s) filled. Please check and correct them before saving.`);
