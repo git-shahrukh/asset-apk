@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { componentTokens, shape, spacing, typography, useTheme } from '../theme';
 
 const onlyDigits = (s: string) => s.replace(/\D/g, '');
 
 export function DurationField({ value, onChange, onBlur, hasError, inputRef }: any) {
+  const { theme } = useTheme();
   const [initH = '', initM = ''] = value ? String(value).split(':') : [];
   const [h, setH] = useState(initH);
   const [m, setM] = useState(initM);
@@ -15,27 +17,31 @@ export function DurationField({ value, onChange, onBlur, hasError, inputRef }: a
     onChange(nh === '' && nm === '' ? '' : `${nh || '0'}:${nm || '0'}`);
   };
 
-  const borderColor = hasError ? 'red' : '#ccc';
+  const borderColor = hasError ? theme.colors.error : theme.colors.outline;
 
   return (
     <View style={styles.row}>
       <TextInput
         ref={inputRef}
-        style={[styles.input, { borderColor }]}
+        style={[styles.input, { borderColor, color: theme.colors.textPrimary, backgroundColor: theme.colors.surface }]}
         value={h}
         onChangeText={(t) => update(onlyDigits(t).slice(0, 4), m)}
         onBlur={onBlur}
         keyboardType="number-pad"
         placeholder="0"
+        placeholderTextColor={theme.colors.textSecondary}
+        accessibilityLabel="Hours"
       />
       <Text style={styles.unit}>h</Text>
       <TextInput
-        style={[styles.input, { borderColor }]}
+        style={[styles.input, { borderColor, color: theme.colors.textPrimary, backgroundColor: theme.colors.surface }]}
         value={m}
         onChangeText={(t) => update(h, onlyDigits(t).slice(0, 2))}
         onBlur={onBlur}
         keyboardType="number-pad"
         placeholder="0"
+        placeholderTextColor={theme.colors.textSecondary}
+        accessibilityLabel="Minutes"
       />
       <Text style={styles.unit}>min</Text>
     </View>
@@ -44,6 +50,6 @@ export function DurationField({ value, onChange, onBlur, hasError, inputRef }: a
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  input: { borderWidth: 1, borderRadius: 8, padding: 10, width: 80, textAlign: 'center' },
-  unit: { marginHorizontal: 8 },
+  input: { minHeight: componentTokens.input.height, borderWidth: componentTokens.card.borderWidth, borderRadius: shape.medium, padding: spacing.md, width: componentTokens.duration.inputWidth, textAlign: 'center', ...typography.body },
+  unit: { marginHorizontal: spacing.sm, ...typography.bodySmall },
 });

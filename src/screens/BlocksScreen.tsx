@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useBlocks } from '../api/queries';
 import { useAuth } from '../auth/authStore';
-import { EmptyView, ErrorView, Input, Loader, colors } from '../components/ui';
+import { ModuleCard } from '../components/ModuleCard';
+import { EmptyView, ErrorView, Input, Loader } from '../components/ui';
+import { componentTokens, spacing, typography, useTheme } from '../theme';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Blocks'>;
 
-// "😄😀😃" → "😄". Keeps emoji like "⚙️" whole (base character + variation selector / joiners).
+// Keep emoji sequences such as a base character plus variation selector/joiners together.
 function firstEmoji(icon: string) {
   const chars = Array.from(icon.trim());
   let out = chars[0] ?? '';
@@ -16,13 +19,19 @@ function firstEmoji(icon: string) {
     if (chars[i] === '\uFE0F' || chars[i] === '\u200D' || chars[i - 1] === '\u200D') out += chars[i];
     else break;
   }
-  return out || '📁';
+  return out || '\uD83D\uDCC1';
 }
 
 export function BlocksScreen({ navigation }: Props) {
+  const { theme } = useTheme();
   const user = useAuth((s) => s.user);
   const { data, isLoading, error, refetch, isRefetching } = useBlocks();
+  const { width } = useWindowDimensions();
   const [search, setSearch] = useState('');
+  const columns = width >= 360 ? 2 : 1;
+  const cardWidth = columns === 2
+    ? (width - spacing.lg * 2 - spacing.md) / 2
+    : width - spacing.lg * 2;
 
   const blocks = useMemo(
     () => (data ?? []).filter((b) => b.pluralName.toLowerCase().includes(search.trim().toLowerCase())),
@@ -35,52 +44,58 @@ export function BlocksScreen({ navigation }: Props) {
 
   return (
     <FlatList
+      key={columns}
       data={blocks}
+      numColumns={columns}
       keyExtractor={(b) => b.id}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[styles.list, { backgroundColor: theme.colors.background }]}
+      columnWrapperStyle={columns > 1 ? styles.columnWrapper : undefined}
       refreshing={isRefetching}
       onRefresh={refetch}
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
         <View style={styles.header}>
-          <Text style={styles.hello}>Hi, {user.name}</Text>
-          <Text style={styles.role}>{user.roleName}</Text>
-          <Input placeholder="Search modules" value={search} onChangeText={setSearch} autoCorrect={false} />
+          <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>Asset workspace</Text>
+          <Text style={[styles.hello, { color: theme.colors.textPrimary }]}>Hi, {user.name}</Text>
+          <Text style={[styles.role, { color: theme.colors.textSecondary }]}>{user.roleName}</Text>
+          <View style={styles.searchWrap}>
+            <Input
+              placeholder="Search modules"
+              value={search}
+              onChangeText={setSearch}
+              autoCorrect={false}
+              accessibilityLabel="Search modules"
+              right={<Ionicons name="search-outline" size={componentTokens.iconSize.medium} color={theme.colors.textSecondary} />}
+            />
+          </View>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Modules</Text>
+          <Text style={[styles.sectionMeta, { color: theme.colors.textSecondary }]}>
+            {blocks.length} {blocks.length === 1 ? 'module' : 'modules'} available
+          </Text>
         </View>
       }
-      ListEmptyComponent={<Text style={styles.empty}>{search ? 'No matching modules' : 'No modules available'}</Text>}
+      ListEmptyComponent={<EmptyView title={search ? 'No matching modules' : 'No modules available'} message={search ? 'Try a different search term.' : 'Modules will appear here when they are assigned to your account.'} icon="grid-outline" />}
       renderItem={({ item }) => (
-        <Pressable
-          style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.primaryLight }]}
+        <ModuleCard
+          icon={firstEmoji(item.icon)}
+          title={item.pluralName}
+          subtitle={`Add ${item.name}`}
+          cardWidth={cardWidth}
           onPress={() => navigation.navigate('RecordForm', { blockId: item.id, blockName: item.name })}
-        >
-          <View style={styles.iconBox}>
-            <Text style={styles.icon}>{firstEmoji(item.icon)}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name} numberOfLines={2}>{item.pluralName}</Text>
-            <Text style={styles.sub}>Add {item.name}</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
+        />
       )}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, backgroundColor: colors.bg, flexGrow: 1 },
-  header: { marginBottom: 12, gap: 4 },
-  hello: { fontSize: 22, fontWeight: '700', color: colors.text, textTransform: 'capitalize' },
-  role: { fontSize: 14, color: colors.muted, marginBottom: 12 },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginBottom: 10,
-    borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-  },
-  iconBox: { width: 48, height: 48, borderRadius: 12, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  icon: { fontSize: 24 },
-  name: { fontSize: 16, fontWeight: '600', color: colors.text },
-  sub: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  chevron: { fontSize: 26, color: colors.muted },
-  empty: { textAlign: 'center', color: colors.muted, marginTop: 40 },
+  list: { padding: spacing.lg, flexGrow: 1, gap: spacing.md },
+  columnWrapper: { gap: spacing.md },
+  header: { marginBottom: spacing.xs, gap: spacing.xs },
+  eyebrow: { ...typography.label, textTransform: 'uppercase', letterSpacing: 0.8 },
+  hello: { ...typography.headline, textTransform: 'capitalize', marginTop: spacing.xs },
+  role: { ...typography.bodySmall, marginBottom: spacing.sm },
+  searchWrap: { marginTop: spacing.xs, marginBottom: spacing.lg },
+  sectionTitle: { ...typography.title },
+  sectionMeta: { ...typography.bodySmall },
 });

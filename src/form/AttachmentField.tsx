@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { getDocumentAsync } from 'expo-document-picker';
 import { launchCameraAsync, requestCameraPermissionsAsync } from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import { PickedFile } from '../api/types';
-import { colors, showPopup } from '../components/ui';
+import { AnimatedPressable, Button, Surface, showPopup } from '../components/ui';
+import { componentTokens, shape, spacing, typography, useTheme } from '../theme';
 import type { FieldProps } from './fieldComponents';
 
-const MAX_ATTACHMENTS = 5; // change this number to change the limit
+const MAX_ATTACHMENTS = 5;
 
-// Current position, or nulls if permission is denied or GPS fails.
 async function getCoords(): Promise<{ latitude: number | null; longitude: number | null }> {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -21,10 +22,9 @@ async function getCoords(): Promise<{ latitude: number | null; longitude: number
   }
 }
 
-export function AttachmentField({ field, value, onChange, onBlur, hasError }: FieldProps) {
+export function AttachmentField({ value, onChange, onBlur, hasError }: FieldProps) {
+  const { theme } = useTheme();
   const [busy, setBusy] = useState(false);
-
-  // Old saved values may be '' or a single file, so normalise to an array.
   const files: PickedFile[] = Array.isArray(value) ? value : value ? [value] : [];
   const remaining = MAX_ATTACHMENTS - files.length;
   const full = remaining <= 0;
@@ -54,14 +54,11 @@ export function AttachmentField({ field, value, onChange, onBlur, hasError }: Fi
     try {
       const perm = await requestCameraPermissionsAsync();
       if (!perm.granted) return showPopup('Permission needed', 'Allow camera access to take photos.');
-
       const result = await launchCameraAsync({ quality: 0.7 });
       if (result.canceled) return;
-
       const asset = result.assets[0];
-      const { latitude, longitude } = await getCoords(); // taken right after the photo
+      const { latitude, longitude } = await getCoords();
       if (latitude == null) showPopup('Location unavailable', 'The photo was added without a location.');
-
       add([{
         uri: asset.uri,
         name: asset.fileName ?? `photo_${Date.now()}.jpg`,
@@ -79,42 +76,44 @@ export function AttachmentField({ field, value, onChange, onBlur, hasError }: Fi
   return (
     <View>
       <View style={styles.row}>
-        <Pressable onPress={takePhoto} disabled={busy || full} style={[styles.btn, hasError && styles.err, (busy || full) && styles.off]}>
-          <Text style={styles.btnText}>{busy ? 'Please wait…' : 'Camera'}</Text>
-        </Pressable>
-        <Pressable onPress={pickDocuments} disabled={busy || full} style={[styles.btn, hasError && styles.err, (busy || full) && styles.off]}>
-          <Text style={styles.btnText}>Choose files</Text>
-        </Pressable>
+        <View style={styles.actionButton}>
+          <Button title="Camera" onPress={takePhoto} loading={busy} disabled={full} hasError={hasError} variant="secondary" icon="camera-outline" />
+        </View>
+        <View style={styles.actionButton}>
+          <Button title="Choose files" onPress={pickDocuments} disabled={busy || full} hasError={hasError} variant="secondary" icon="attach-outline" />
+        </View>
       </View>
 
-      <Text style={styles.count}>{files.length} / {MAX_ATTACHMENTS} attached</Text>
+      <Text style={[styles.count, { color: theme.colors.textSecondary }]}>{files.length} / {MAX_ATTACHMENTS} attached</Text>
 
-      {files.map((f, i) => (
-        <View key={`${f.uri}-${i}`} style={styles.item}>
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={styles.name}>{f.name}</Text>
-            {f.latitude != null && f.longitude != null && (
-              <Text style={styles.coords}>📍 {f.latitude.toFixed(5)}, {f.longitude.toFixed(5)}</Text>
+      {files.map((file, index) => (
+        <Surface key={`${file.uri}-${index}`} style={[styles.item, { borderColor: hasError ? theme.colors.error : theme.colors.outline }]} outlined>
+          <View style={[styles.fileIcon, { backgroundColor: theme.colors.primaryContainer }]}>
+            <Ionicons name="document-attach-outline" size={componentTokens.iconSize.medium} color={theme.colors.primary} />
+          </View>
+          <View style={styles.fileMeta}>
+            <Text numberOfLines={1} style={[styles.name, { color: theme.colors.textPrimary }]}>{file.name}</Text>
+            {file.latitude != null && file.longitude != null && (
+              <Text style={[styles.coords, { color: theme.colors.textSecondary }]}>Location: {file.latitude.toFixed(5)}, {file.longitude.toFixed(5)}</Text>
             )}
           </View>
-          <Pressable onPress={() => remove(i)} hitSlop={8}>
-            <Text style={styles.remove}>Remove</Text>
-          </Pressable>
-        </View>
+          <AnimatedPressable onPress={() => remove(index)} style={styles.removeButton} accessibilityLabel={`Remove ${file.name}`}>
+            <Ionicons name="trash-outline" size={componentTokens.iconSize.medium} color={theme.colors.error} />
+          </AnimatedPressable>
+        </Surface>
       ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8 },
-  btn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingVertical: 13, alignItems: 'center', backgroundColor: colors.card },
-  btnText: { color: colors.primary, fontSize: 16, fontWeight: '600' },
-  err: { borderColor: colors.danger },
-  off: { opacity: 0.5 },
-  count: { color: colors.muted, fontSize: 13, marginTop: 6 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  name: { fontSize: 15, color: colors.text },
-  coords: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  remove: { color: colors.danger, fontSize: 15, fontWeight: '600' },
+  row: { flexDirection: 'row', gap: spacing.sm },
+  actionButton: { flex: 1 },
+  count: { ...typography.bodySmall, marginTop: spacing.sm },
+  item: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, padding: spacing.md, borderRadius: shape.medium },
+  fileIcon: { width: componentTokens.touchTarget.minimum, height: componentTokens.touchTarget.minimum, borderRadius: shape.medium, alignItems: 'center', justifyContent: 'center' },
+  fileMeta: { flex: 1, minWidth: 0 },
+  name: { ...typography.bodySmall },
+  coords: { ...typography.label, marginTop: spacing.xs },
+  removeButton: { padding: spacing.xs },
 });

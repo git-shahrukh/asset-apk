@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
-import { Pressable, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { Text } from 'react-native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from './auth/authStore';
-import { Loader, colors } from './components/ui';
+import { AnimatedPressable, Loader } from './components/ui';
 import { BlocksScreen } from './screens/BlocksScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { RecordFormScreen } from './screens/RecordFormScreen';
 import  OcrTestScreen  from './utils/OcrTestScreen';
+import { spacing, typography, useTheme } from './theme';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -19,6 +20,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function Navigation() {
+  const { theme } = useTheme();
   const status = useAuth((s) => s.status);
   const restore = useAuth((s) => s.restore);
   const logout = useAuth((s) => s.logout);
@@ -30,8 +32,27 @@ export function Navigation() {
   if (status === 'loading') return <Loader />;
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
+    <NavigationContainer theme={{
+      ...DefaultTheme,
+      dark: false,
+      colors: {
+        ...DefaultTheme.colors,
+        primary: theme.colors.primary,
+        background: theme.colors.background,
+        card: theme.colors.surface,
+        text: theme.colors.textPrimary,
+        border: theme.colors.outline,
+        notification: theme.colors.error,
+      },
+    }}>
+      <Stack.Navigator screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.surface },
+        headerTintColor: theme.colors.textPrimary,
+        headerTitleStyle: { ...typography.title },
+        headerShadowVisible: false,
+        headerBackTitle: 'Back',
+        contentStyle: { backgroundColor: theme.colors.background },
+      }}>
         {status === 'signedIn' ? (
           <>
             <Stack.Screen
@@ -40,9 +61,9 @@ export function Navigation() {
               options={{
                 title: 'Asset Management',
                 headerRight: () => (
-                  <Pressable onPress={logout} hitSlop={10}>
-                    <Text style={{ color: colors.primary, fontWeight: '600' }}>Logout</Text>
-                  </Pressable>
+                  <AnimatedPressable onPress={logout} accessibilityLabel="Log out" style={{ padding: spacing.sm }}>
+                    <Text style={{ color: theme.colors.primary, ...typography.label }}>Log out</Text>
+                  </AnimatedPressable>
                 ),
               }}
             />

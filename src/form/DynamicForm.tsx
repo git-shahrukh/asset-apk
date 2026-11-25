@@ -1,19 +1,16 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { Control, Controller, Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ApiError } from '../api/client';
 import { Field, FormValues, Place } from '../api/types';
-import { Button, FormItem, colors,revealFocusedInput,showPopup  } from '../components/ui';
+import { Button, FormItem, Surface, revealFocusedInput, showPopup } from '../components/ui';
+import { componentTokens, elevation, spacing, typography, useTheme } from '../theme';
 import { TEXT_MAX_LENGTH, UnsupportedField, fieldComponents } from './fieldComponents';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { Platform } from 'react-native';
 import { ScanError, scanText } from '../utils/scanText';
 import { parseScan } from '../services/parseScan';
-import { launchCameraAsync, requestCameraPermissionsAsync } from 'expo-image-picker';
-import TextRecognition from '@react-native-ml-kit/text-recognition';
-import { matchFields } from './ocrFill';
 
 const NUMBER_PATTERN = /^-?\d+(\.\d+)?$/;
 const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/;
@@ -131,6 +128,7 @@ interface Props {
 }
 
 export function DynamicForm({ fields, initialValues, submitLabel, onSubmit }: Props) {
+  const { theme } = useTheme();
   const schema = useMemo(() => buildSchema(fields), [fields]);
   const { control, handleSubmit, setError, setFocus, setValue, formState: { isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
@@ -181,63 +179,33 @@ export function DynamicForm({ fields, initialValues, submitLabel, onSubmit }: Pr
   }, (errors) => goToFirstError((id) => !!errors[id]))();
 
 
- // ---------- state Scan label with OCR ----------
+  // ---------- Scan label with OCR ----------
   const [scanning, setScanning] = useState(false);
 
-const scanLabel = async () => {
-  setScanning(true);
-  try {
-    const scan = await scanText();
-    if (!scan) return;
+  const scanLabel = async () => {
+    setScanning(true);
+    try {
+      const scan = await scanText();
+      if (!scan) return;
 
-    const parsed = parseScan(scan.lines, fields);
-    console.log('MATCHED:', parsed.values, '| description field id:', parsed.descriptionId);
+      const parsed = parseScan(scan.lines, fields);
+      if (__DEV__) console.log('OCR matched field ids:', Object.keys(parsed.values));
 
-    const opts = { shouldDirty: true, shouldTouch: true, shouldValidate: true };
-    for (const [id, value] of Object.entries(parsed.values)) setValue(id, value, opts);
+      const opts = { shouldDirty: true, shouldTouch: true, shouldValidate: true };
+      for (const [id, value] of Object.entries(parsed.values)) setValue(id, value, opts);
 
-    if (parsed.description && parsed.descriptionId) {
-      setValue(parsed.descriptionId, parsed.description, opts);
+      if (parsed.description && parsed.descriptionId) {
+        setValue(parsed.descriptionId, parsed.description, opts);
+      }
+      if (!Object.keys(parsed.values).length) {
+        showPopup('Nothing matched', 'No labels recognised. Unmatched text went to Description.');
+      }
+    } catch (e) {
+      showPopup('Scan failed', e instanceof ScanError ? e.message : String(e));
+    } finally {
+      setScanning(false);
     }
-    if (!Object.keys(parsed.values).length) {
-      showPopup('Nothing matched', 'No labels recognised. Unmatched text went to Description.');
-    }
-  } catch (e) {
-    showPopup('Scan failed', e instanceof ScanError ? e.message : String(e));
-  const [scanning, setScanning] = useState(false);
-
-const scanLabel = async () => {
-  const perm = await requestCameraPermissionsAsync();
-  if (!perm.granted) return showPopup('Permission needed', 'Allow camera access to scan.');
-
-  const photo = await launchCameraAsync({ quality: 0.8, allowsEditing: true });
-  if (photo.canceled) return;
-
-  setScanning(true);
-  try {
-    const result = await TextRecognition.recognize(photo.assets[0].uri);
-    if (!result.text.trim()) {
-      return showPopup('Nothing read', 'Try again with better light.');
-    }
-    const lines = result.blocks.flatMap((b) =>
-      b.lines.map((l) => ({ text: l.text, top: Math.round(l.frame?.top ?? 0), left: Math.round(l.frame?.left ?? 0) })),
-    );
-
-    // Match scanned text to this form's fields
-    const filled = matchFields(fields, result.text, lines, TEXT_MAX_LENGTH);
-    for (const [id, value] of Object.entries(filled)) {
-      setValue(id, value, { shouldValidate: true, shouldDirty: true });
-    }
-    if (__DEV__) console.log('OCR filled field ids:', Object.keys(filled));
-
-    const count = Object.keys(filled).length;
-    showPopup('Scan complete', `${count} field(s) filled. Please check and correct them before saving.`);
-  } catch (e) {
-    showPopup('Scan failed', String(e));
-  } finally {
-    setScanning(false);
-  }
-};
+  };
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={headerHeight}>
       <FlatList
@@ -250,25 +218,30 @@ const scanLabel = async () => {
         }}
         data={fields}
         keyExtractor={(f) => f.id}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { backgroundColor: theme.colors.background }]}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item, index }) => (
           <FieldRow field={item} index={index} control={control} onReveal={revealRow} onCoordinates={fillCoordinates} />
         )}
         ListFooterComponent={
           <View>
-            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-            <Button title={submitLabel} onPress={submit} loading={isSubmitting} />
+            {formError ? (
+              <Surface style={[styles.formErrorCard, { backgroundColor: theme.colors.errorContainer }]}>
+                <Text style={[styles.formError, { color: theme.colors.onErrorContainer }]}>{formError}</Text>
+              </Surface>
+            ) : null}
+            <Button title={submitLabel} onPress={submit} loading={isSubmitting} icon="checkmark" />
           </View>
         }
-        
         ListHeaderComponent={
-  Platform.OS !== 'web' ? (
-    <View style={{ marginBottom: 16 }}>
-      <Button title="Scan label" onPress={scanLabel} loading={scanning} />
-    </View>
-  ) : undefined
-}
+          Platform.OS !== 'web' ? (
+            <Surface style={styles.scanCard} outlined>
+              <Text style={[styles.scanTitle, { color: theme.colors.textPrimary }]}>Quick fill with OCR</Text>
+              <Text style={[styles.scanDescription, { color: theme.colors.textSecondary }]}>Scan an equipment label to pre-fill matching fields.</Text>
+              <Button title="Scan label" onPress={scanLabel} loading={scanning} variant="tonal" icon="scan-outline" />
+            </Surface>
+          ) : undefined
+        }
       />
     </KeyboardAvoidingView>
   );
@@ -303,6 +276,10 @@ const FieldRow = memo(function FieldRow({ field, index, control, onReveal, onCoo
 });
 
 const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 40, backgroundColor: colors.bg, flexGrow: 1 },
-  formError: { color: colors.danger, marginBottom: 8, textAlign: 'center' },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
+  scanCard: { marginBottom: spacing.lg, padding: spacing.lg, ...elevation.low },
+  scanTitle: { ...typography.title },
+  scanDescription: { ...typography.bodySmall, marginTop: spacing.xs },
+  formErrorCard: { padding: spacing.md, marginBottom: spacing.sm, borderRadius: componentTokens.card.radius, ...elevation.none },
+  formError: { ...typography.bodySmall, textAlign: 'center' },
 });
