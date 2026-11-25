@@ -235,3 +235,22 @@ export async function getUsers(clientId: string): Promise<Option[]> {
     value: String(u.id),
   }));
 }
+
+// The backend's "location" field. Moving the pin fills in the location, latitude and longitude.
+export interface PlaceSuggestion { label: string; lat: number; lng: number }
+
+export async function suggestPlaces(query: string, signal?: AbortSignal): Promise<PlaceSuggestion[]> {
+  const url = `https://photon.komoot.io/api/?limit=5&q=${encodeURIComponent(query)}`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error('Suggestions failed');
+  const json = await res.json();
+
+  return (json.features ?? []).map((f: any) => {
+    const p = f.properties ?? {};
+    const label = [p.name, p.street, p.district, p.city, p.state, p.country]
+      .filter((part, i, all) => part && all.indexOf(part) === i)   // drop empty and duplicate parts
+      .join(', ');
+    const [lng, lat] = f.geometry.coordinates;                      // GeoJSON order is [lng, lat]
+    return { label, lat, lng };
+  });
+}
