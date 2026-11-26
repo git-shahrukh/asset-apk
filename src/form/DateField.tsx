@@ -67,7 +67,8 @@ import { ChangeEvent, MouseEvent, createElement, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, PickerButton } from '../components/ui';
+import { PickerButton } from '../components/ui';
+import { componentTokens, spacing, typography, useTheme } from '../theme';
 import type { FieldProps } from './fieldComponents';
 import { isFutureOnly, todayText } from './dateRules';
 
@@ -84,6 +85,7 @@ function toDate(text: string) {
 }
 
 export function DateField({ field, value, onChange, onBlur, hasError }: FieldProps) {
+  const { theme } = useTheme();
   const [open, setOpen] = useState(false);
   const futureOnly = isFutureOnly(field); // ← NEW: true for expiry / next service dates
 
@@ -97,8 +99,14 @@ export function DateField({ field, value, onChange, onBlur, hasError }: FieldPro
       onClick: (e: MouseEvent<HTMLInputElement>) => e.currentTarget.showPicker(),
       onBlur,
       style: {
-        padding: 12, fontSize: 16, borderRadius: 10, color: colors.text, backgroundColor: colors.card,
-        border: `1px solid ${hasError ? colors.danger : colors.border}`,
+        minHeight: componentTokens.input.height,
+        padding: spacing.md,
+        fontSize: typography.body.fontSize,
+        borderRadius: componentTokens.input.radius,
+        color: theme.colors.textPrimary,
+        backgroundColor: theme.colors.surface,
+        border: `1px solid ${hasError ? theme.colors.error : theme.colors.outline}`,
+        outline: 'none',
       },
     });
   }
@@ -107,7 +115,7 @@ export function DateField({ field, value, onChange, onBlur, hasError }: FieldPro
     <>
       {/* NEW: calendar icon beside the button */}
       <View style={styles.row}>
-        <Ionicons name="calendar-outline" size={22} color={colors.muted} style={styles.icon} />
+        <Ionicons name="calendar-outline" size={componentTokens.iconSize.medium} color={theme.colors.textSecondary} style={styles.icon} />
         <View style={{ flex: 1 }}>
           <PickerButton
             text={value}
