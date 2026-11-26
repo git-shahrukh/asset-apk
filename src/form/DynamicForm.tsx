@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { Control, Controller, Resolver, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,12 +8,8 @@ import { Field, FormValues, Place } from '../api/types';
 import { Button, FormItem, colors,revealFocusedInput,showPopup  } from '../components/ui';
 import { TEXT_MAX_LENGTH, UnsupportedField, fieldComponents } from './fieldComponents';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { Platform } from 'react-native';
 import { ScanError, scanText } from '../utils/scanText';
 import { parseScan } from '../services/parseScan';
-import { launchCameraAsync, requestCameraPermissionsAsync } from 'expo-image-picker';
-import TextRecognition from '@react-native-ml-kit/text-recognition';
-import { matchFields } from './ocrFill';
 
 const NUMBER_PATTERN = /^-?\d+(\.\d+)?$/;
 const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/;
@@ -201,36 +197,6 @@ const scanLabel = async () => {
     }
   } catch (e) {
     showPopup('Scan failed', e instanceof ScanError ? e.message : String(e));
-  const [scanning, setScanning] = useState(false);
-
-const scanLabel = async () => {
-  const perm = await requestCameraPermissionsAsync();
-  if (!perm.granted) return showPopup('Permission needed', 'Allow camera access to scan.');
-
-  const photo = await launchCameraAsync({ quality: 0.8, allowsEditing: true });
-  if (photo.canceled) return;
-
-  setScanning(true);
-  try {
-    const result = await TextRecognition.recognize(photo.assets[0].uri);
-    if (!result.text.trim()) {
-      return showPopup('Nothing read', 'Try again with better light.');
-    }
-    const lines = result.blocks.flatMap((b) =>
-      b.lines.map((l) => ({ text: l.text, top: Math.round(l.frame?.top ?? 0), left: Math.round(l.frame?.left ?? 0) })),
-    );
-
-    // Match scanned text to this form's fields
-    const filled = matchFields(fields, result.text, lines, TEXT_MAX_LENGTH);
-    for (const [id, value] of Object.entries(filled)) {
-      setValue(id, value, { shouldValidate: true, shouldDirty: true });
-    }
-    console.log('OCR filled:', filled);
-
-    const count = Object.keys(filled).length;
-    showPopup('Scan complete', `${count} field(s) filled. Please check and correct them before saving.`);
-  } catch (e) {
-    showPopup('Scan failed', String(e));
   } finally {
     setScanning(false);
   }

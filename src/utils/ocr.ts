@@ -1,4 +1,4 @@
-import TextRecognition from '@react-native-ml-kit/text-recognition';
+import { extractTextFromImage } from 'expo-text-extractor';
 
 export interface OcrLine {
   text: string;
@@ -8,15 +8,12 @@ export interface OcrLine {
 }
 
 export async function readLines(uri: string): Promise<OcrLine[]> {
-  const result = await TextRecognition.recognize(uri);
-  const lines = result.blocks.flatMap((b) =>
-    b.lines.map((l) => ({
-      text: l.text.replace(/\s+/g, ' ').trim(),
-      top: l.frame?.top ?? 0,
-      left: l.frame?.left ?? 0,
-      height: l.frame?.height ?? 0,
-    })),
-  );
+  const lines = (await extractTextFromImage(uri)).map((text, index) => ({
+    text: text.replace(/\s+/g, ' ').trim(),
+    top: index * 12,
+    left: 0,
+    height: 10,
+  }));
   // read top to bottom, then left to right
   return lines.filter((l) => l.text).sort((a, b) => a.top - b.top || a.left - b.left);
 }
