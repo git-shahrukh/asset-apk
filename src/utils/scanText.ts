@@ -67,8 +67,7 @@
 // }
 
 import { launchCameraAsync, requestCameraPermissionsAsync } from 'expo-image-picker';
-import ImageCropPicker from 'react-native-image-crop-picker';
-import TextRecognition from '@react-native-ml-kit/text-recognition';
+import { extractTextFromImage, isSupported } from 'expo-text-extractor';
 
 export interface ScanLine {
   text: string;
@@ -86,46 +85,30 @@ export interface ScanResult {
 export class ScanError extends Error {}
 
 export async function scanText(): Promise<ScanResult | null> {
-  
   let step = 'permission';
   try {
+    if (!isSupported) throw new ScanError('Text scanning is not supported on this device.');
     const perm = await requestCameraPermissionsAsync();
     if (!perm.granted) throw new ScanError('Allow camera access to scan.');
 
     step = 'camera';
-    // allowsEditing stays off (bad URI on some Oppo/Realme phones). We crop separately.
     const photo = await launchCameraAsync({ quality: 0.8, allowsEditing: false });
     if (photo.canceled) return null;
     const rawUri = photo.assets?.[0]?.uri;
     if (!rawUri) throw new ScanError('No image was returned.');
 
-       step = 'crop';
-    let uri = rawUri;
-    try {
-      const cropped = await ImageCropPicker.openCropper({
-        path: rawUri,
-        mediaType: 'photo',            // required by the library's types
-        freeStyleCropEnabled: true,    // drag any edge, not a fixed ratio
-        cropperToolbarTitle: 'Crop the label',
-        compressImageQuality: 0.9,
-      });
-      uri = cropped.path;
-    } catch (e: any) {
-      if (e?.code === 'E_PICKER_CANCELLED') return null;   // user backed out
-      console.warn('crop failed, using full photo', e);     // fallback: scan uncropped
-    }
     step = 'ocr';
-    const result = await TextRecognition.recognize(uri);
-    const lines: ScanLine[] = result.blocks.flatMap((b) =>
-      b.lines.map((l) => ({
-        text: l.text.replace(/\s+/g, ' ').trim(),
-        top: Math.round(l.frame?.top ?? 0),
-        left: Math.round(l.frame?.left ?? 0),
-        height: Math.round(l.frame?.height ?? 0),
-      })),
-    ).filter((l) => l.text);
+    const recognized = await extractTextFromImage(rawUri);
+    const lines: ScanLine[] = recognized
+      .map((text, index) => ({
+        text: text.replace(/\s+/g, ' ').trim(),
+        top: index * 12,
+        left: 0,
+        height: 10,
+      }))
+      .filter((line) => line.text);
 
-    return { text: result.text, lines, uri };
+    return { text: lines.map((line) => line.text).join('\n'), lines, uri: rawUri };
   } catch (e) {
     if (e instanceof ScanError) throw e;
     throw new ScanError(`Failed at "${step}": ${String(e)}`);
