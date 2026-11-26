@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { launchCameraAsync, requestCameraPermissionsAsync } from 'expo-image-picker';
-import TextRecognition from '@react-native-ml-kit/text-recognition';
+import { extractTextFromImage } from 'expo-text-extractor';
 import { Button, showPopup } from '../components/ui';
 import type { OcrLine } from './ocrFill';
 
@@ -15,11 +15,9 @@ export function ScanButton({ onScan }: { onScan: (text: string, lines: OcrLine[]
 
     setBusy(true);
     try {
-      const r = await TextRecognition.recognize(photo.assets[0].uri);
-      const lines = r.blocks.flatMap((b) =>
-        b.lines.map((l) => ({ text: l.text, top: l.frame?.top ?? 0, left: l.frame?.left ?? 0 })),
-      );
-      onScan(r.text, lines);
+      const texts = await extractTextFromImage(photo.assets[0].uri);
+      const lines = texts.map((text, index) => ({ text, top: index * 12, left: 0 }));
+      onScan(texts.join('\n'), lines);
     } catch (e) {
       showPopup('Scan failed', String(e));
     } finally {

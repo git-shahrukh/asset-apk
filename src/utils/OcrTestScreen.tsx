@@ -87,7 +87,7 @@
 import { useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { launchCameraAsync, launchImageLibraryAsync, requestCameraPermissionsAsync } from 'expo-image-picker';
-import TextRecognition from '@react-native-ml-kit/text-recognition';
+import { extractTextFromImage } from 'expo-text-extractor';
 import { Button, colors, showPopup } from '../components/ui';
 
 interface Line { text: string; top: number; left: number }
@@ -135,26 +135,25 @@ export default function OcrTestScreen() {
     setBusy(true);
     try {
       const start = Date.now();
-      const result = await TextRecognition.recognize(imageUri);
+      const recognized = await extractTextFromImage(imageUri);
       setMs(Date.now() - start);
+      const text = recognized.join('\n');
 
       // 1. Original scan, kept unchanged for comparison
-      setFullText(result.text);
+      setFullText(text);
 
       // 2. Scanned text goes into the description by default (user can edit it)
-      setDescription(result.text);
+      setDescription(text);
 
       // 3. Suggested fields (user can edit them too)
-      const parsed = parseNameplate(result.text);
+      const parsed = parseNameplate(text);
       setModel(parsed.model);
       setSpecification(parsed.specification);
 
-      const found = result.blocks.flatMap((b) =>
-        b.lines.map((l) => ({ text: l.text, top: l.frame?.top ?? 0, left: l.frame?.left ?? 0 })),
-      );
+      const found = recognized.map((line, index) => ({ text: line, top: index * 12, left: 0 }));
       setLines(found);
 
-      console.log('OCR full text:\n', result.text);
+      console.log('OCR full text:\n', text);
       console.log('OCR parsed:', parsed);
     } catch (e) {
       showPopup('Scan failed', String(e));
