@@ -1,4 +1,3 @@
-// import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 // import { Platform, StyleSheet, Text, View } from 'react-native';
 // import { WebView } from 'react-native-webview';
 // // import { reverseGeocode, searchPlace } from '../api/endpoints';
@@ -151,10 +150,11 @@
 // });
 
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Place } from '../api/types';
-import { Button, Input, colors } from '../components/ui';
+import { AnimatedPressable, Button, Input } from '../components/ui';
+import { componentTokens, shape, spacing, typography, useTheme } from '../theme';
 import type { FieldProps } from './fieldComponents';
 import { mapHtml } from './mapHtml';
 import { reverseGeocode, searchPlace, suggestPlaces, PlaceSuggestion } from '../api/endpoints';
@@ -162,6 +162,20 @@ import { reverseGeocode, searchPlace, suggestPlaces, PlaceSuggestion } from '../
 interface Pin {
   lat: number;
   lng: number;
+}
+
+function parsePinMessage(raw: string): Pin | null {
+  try {
+    const value = JSON.parse(raw) as { lat?: unknown; lng?: unknown };
+    if (
+      typeof value.lat !== 'number' || typeof value.lng !== 'number' ||
+      !Number.isFinite(value.lat) || !Number.isFinite(value.lng) ||
+      value.lat < -90 || value.lat > 90 || value.lng < -180 || value.lng > 180
+    ) return null;
+    return { lat: value.lat, lng: value.lng };
+  } catch {
+    return null;
+  }
 }
 
 const EMPTY: Place = { location: '', latitude: null, longitude: null };
@@ -180,7 +194,9 @@ function MapFrame({ html, onPin }: { html: string; onPin: (pin: Pin) => void }) 
   useEffect(() => {
     if (!frame) return;
     const listener = (event: MessageEvent) => {
-      if (event.source === frame.contentWindow) onPin(JSON.parse(event.data));
+      if (event.source !== frame.contentWindow) return;
+      const pin = parsePinMessage(event.data);
+      if (pin) onPin(pin);
     };
     window.addEventListener('message', listener);
     return () => window.removeEventListener('message', listener);
@@ -196,13 +212,17 @@ function MapFrame({ html, onPin }: { html: string; onPin: (pin: Pin) => void }) 
       source={{ html, baseUrl: 'https://endureva.cloud' }}
       originWhitelist={['*']}
       nestedScrollEnabled // lets the map take the drag instead of the form's scroll
-      onMessage={(event) => onPin(JSON.parse(event.nativeEvent.data))}
+       onMessage={(event) => {
+         const pin = parsePinMessage(event.nativeEvent.data);
+         if (pin) onPin(pin);
+       }}
     />
   );
 }
 
 // The backend's "location" field. Moving the pin fills in the location, latitude and longitude.
 export function LocationField({ value, onChange, onBlur, hasError, inputRef, onCoordinates }: FieldProps) {
+  const { theme } = useTheme();
   const [place, setPlace] = useState<Place>(value || EMPTY);
   // Only changing this reloads the map. It starts at the saved pin if the row was re-created.
   const [center, setCenter] = useState(() =>
@@ -318,37 +338,36 @@ export function LocationField({ value, onChange, onBlur, hasError, inputRef, onC
 
       {/* NEW: suggestion list */}
       {suggestions.length > 0 && (
-        <View style={styles.suggestions}>
+        <View style={[styles.suggestions, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}>
           {suggestions.map((s, i) => (
-            <Pressable key={`${s.lat}-${s.lng}-${i}`} onPress={() => pickSuggestion(s)} style={styles.suggestion}>
-              <Text style={styles.suggestionText} numberOfLines={2}>{s.label}</Text>
-            </Pressable>
+            <AnimatedPressable key={`${s.lat}-${s.lng}-${i}`} onPress={() => pickSuggestion(s)} style={[styles.suggestion, { borderBottomColor: theme.colors.outline }]}>
+              <Text style={[styles.suggestionText, { color: theme.colors.textPrimary }]} numberOfLines={2}>{s.label}</Text>
+            </AnimatedPressable>
           ))}
         </View>
       )}
 
       <Button title="Find on map" onPress={findOnMap} loading={searching} disabled={!place.location.trim()} />
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      {message ? <Text style={[styles.message, { color: theme.colors.error }]}>{message}</Text> : null}
 
-      <View style={styles.map}>
+      <View style={[styles.map, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}>
         <MapFrame html={html} onPin={onPin} />
       </View>
 
       <View style={styles.row}>
-        <Text style={styles.coordinate}>{`Latitude: ${place.latitude ?? '—'}`}</Text>
-        <Text style={styles.coordinate}>{`Longitude: ${place.longitude ?? '—'}`}</Text>
+        <Text style={[styles.coordinate, { color: theme.colors.textSecondary }]}>{`Latitude: ${place.latitude ?? '—'}`}</Text>
+        <Text style={[styles.coordinate, { color: theme.colors.textSecondary }]}>{`Longitude: ${place.longitude ?? '—'}`}</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  map: { height: 280, marginTop: 12, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  coordinate: { fontSize: 14, color: colors.text },
-  message: { color: colors.danger, fontSize: 13, marginTop: 6 },
-  // NEW
-  suggestions: { marginTop: 4, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.card, overflow: 'hidden' },
-  suggestion: { paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  suggestionText: { fontSize: 15, color: colors.text },
+  map: { height: componentTokens.location.mapHeight, marginTop: spacing.md, borderRadius: shape.medium, overflow: 'hidden', borderWidth: componentTokens.card.borderWidth },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm, gap: spacing.sm },
+  coordinate: { ...typography.bodySmall, flex: 1 },
+  message: { ...typography.bodySmall, marginTop: spacing.sm },
+  suggestions: { marginTop: spacing.xs, borderWidth: componentTokens.card.borderWidth, borderRadius: shape.medium, overflow: 'hidden' },
+  suggestion: { paddingVertical: spacing.md, paddingHorizontal: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth },
+  suggestionText: { ...typography.bodySmall },
 });

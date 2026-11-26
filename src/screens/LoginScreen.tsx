@@ -1,12 +1,15 @@
 import { ComponentRef, useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../auth/authStore';
-import { Button, FormItem, Input, colors, revealFocusedInput } from '../components/ui';
+import { AnimatedPressable, Button, FormItem, Input, Surface, revealFocusedInput } from '../components/ui';
+import { componentTokens, elevation, shape, spacing, typography, useTheme } from '../theme';
 
 type Errors = { username?: string; password?: string; form?: string };
 
 export function LoginScreen() {
+  const { theme } = useTheme();
   const login = useAuth((s) => s.login);
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -38,7 +41,7 @@ export function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.background }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView
           ref={scrollRef}
@@ -47,15 +50,18 @@ export function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Image source={require('../../assets/icon.png')} style={styles.logo} />
-            <Text style={styles.appName}>Asset Management</Text>
-            <Text style={styles.subtitle}>Sign in to track and manage your assets</Text>
+            <View style={[styles.logoFrame, { backgroundColor: theme.colors.primaryContainer }]}>
+              <Image source={require('../../assets/icon.png')} style={styles.logo} />
+            </View>
+            <Text style={[styles.appName, { color: theme.colors.textPrimary }]}>Asset Management</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>Sign in to track and manage your assets</Text>
           </View>
 
-          <View style={styles.card}>
+          <Surface style={styles.card}>
             {errors.form ? (
-              <View style={styles.banner}>
-                <Text style={styles.bannerText}>{errors.form}</Text>
+              <View style={[styles.banner, { backgroundColor: theme.colors.errorContainer }]}>
+                <Ionicons name="alert-circle-outline" size={componentTokens.iconSize.medium} color={theme.colors.error} />
+                <Text style={[styles.bannerText, { color: theme.colors.onErrorContainer }]}>{errors.form}</Text>
               </View>
             ) : null}
 
@@ -98,17 +104,17 @@ export function LoginScreen() {
                 editable={!loading}
                 hasError={!!errors.password}
                 right={
-                  <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={10}>
-                    <Text style={styles.toggle}>{showPassword ? 'Hide' : 'Show'}</Text>
-                  </Pressable>
+                  <AnimatedPressable onPress={() => setShowPassword((v) => !v)} style={styles.toggleButton} accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
+                    <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={componentTokens.iconSize.medium} color={theme.colors.primary} />
+                  </AnimatedPressable>
                 }
               />
             </FormItem>
 
-            <Button title="Sign in" onPress={handleLogin} loading={loading} />
-          </View>
+            <Button title="Sign in" onPress={handleLogin} loading={loading} icon="arrow-forward" />
+          </Surface>
 
-          <Text style={styles.footer}>Need access? Contact your administrator.</Text>
+          <Text style={[styles.footer, { color: theme.colors.textSecondary }]}>Need access? Contact your administrator.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -116,18 +122,16 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  header: { alignItems: 'center', marginBottom: 32 },
-  logo: { width: 88, height: 88, borderRadius: 20, marginBottom: 16 },
-  appName: { fontSize: 26, fontWeight: '700', color: colors.text },
-  subtitle: { fontSize: 15, color: colors.muted, marginTop: 6, textAlign: 'center' },
-  card: {
-    backgroundColor: colors.card, borderRadius: 16, padding: 20,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3,
-  },
-  banner: { backgroundColor: colors.dangerBg, borderRadius: 8, padding: 12, marginBottom: 16 },
-  bannerText: { color: colors.danger, fontSize: 14 },
-  toggle: { color: colors.primary, fontWeight: '600', paddingLeft: 8 },
-  footer: { textAlign: 'center', color: colors.muted, marginTop: 24, fontSize: 13 },
+  safe: { flex: 1 },
+  container: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
+  header: { alignItems: 'center', marginBottom: spacing.xxl },
+  logoFrame: { width: componentTokens.brand.frameSize, height: componentTokens.brand.frameSize, borderRadius: shape.extraLarge, marginBottom: spacing.lg, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: componentTokens.brand.logoSize, height: componentTokens.brand.logoSize, borderRadius: shape.large },
+  appName: { ...typography.headline, textAlign: 'center' },
+  subtitle: { ...typography.bodySmall, marginTop: spacing.sm, textAlign: 'center' },
+  card: { padding: spacing.xl, ...elevation.medium },
+  banner: { borderRadius: shape.medium, padding: spacing.md, marginBottom: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  bannerText: { ...typography.bodySmall, flex: 1 },
+  toggleButton: { padding: spacing.xs },
+  footer: { textAlign: 'center', marginTop: spacing.xl, ...typography.bodySmall },
 });

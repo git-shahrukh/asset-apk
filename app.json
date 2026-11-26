@@ -4,7 +4,7 @@
     "slug": "asset-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.endureva.assetapp",
       "adaptiveIcon": {
-        "backgroundColor": "#1D4ED8",
+        "backgroundColor": "#1A73E8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
