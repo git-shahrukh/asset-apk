@@ -1,10 +1,10 @@
-export { colors } from './colors';
+export { colors, darkColors, lightColors } from './colors';
 export { componentTokens } from './components';
 export { elevation } from './elevation';
 export { motion } from './motion';
 export { shape } from './shape';
 export { spacing } from './spacing';
 export { typography, fontSizes, fontWeights, lineHeights } from './typography';
-export { lightTheme } from './theme';
+export { darkTheme, lightTheme } from './theme';
 export type { AppTheme } from './theme';
 export { ThemeProvider, useTheme } from './ThemeProvider';

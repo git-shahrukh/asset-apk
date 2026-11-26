@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { AnimatedPressable } from './ui';
-import { colors, componentTokens, elevation, shape, spacing, typography, useTheme } from '../theme';
+import { componentTokens, elevation, shape, spacing, typography, useTheme } from '../theme';
 
 interface ModuleCardProps {
   icon: string;
@@ -20,7 +20,7 @@ export function ModuleCard({ icon, title, subtitle, cardWidth, onPress }: Module
       contentStyle={styles.cardContent}
       style={[styles.card, { width: cardWidth, backgroundColor: theme.colors.surface, borderColor: theme.colors.outline }]}
     >
-      <View style={styles.logoBox}>
+      <View style={[styles.logoBox, { backgroundColor: theme.colors.primaryContainer }]}>
         <Text style={styles.logo}>{icon}</Text>
       </View>
       <View style={styles.content}>
@@ -55,7 +55,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    backgroundColor: colors.primaryContainer,
     marginBottom: spacing.md,
   },
   logo: { fontSize: componentTokens.iconSize.large + spacing.xs },

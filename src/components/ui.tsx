@@ -18,7 +18,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, componentTokens, elevation, motion, shape, spacing, typography, useTheme } from '../theme';
+import { componentTokens, elevation, motion, shape, spacing, typography, useTheme } from '../theme';
 
 export { colors } from '../theme';
 
@@ -59,7 +59,7 @@ export function AnimatedPressable({
   accessibilityState,
   testID,
 }: AnimatedPressableProps) {
-  const { duration } = useTheme();
+  const { duration, theme } = useTheme();
   const [scale] = useState(() => new Animated.Value(1));
   const [opacity] = useState(() => new Animated.Value(1));
   const useNativeDriver = Platform.OS !== 'web';
@@ -81,8 +81,8 @@ export function AnimatedPressable({
       accessibilityState={{ ...accessibilityState, disabled }}
       onPressIn={() => !disabled && animate(motion.scale.pressed, motion.opacity.pressed)}
       onPressOut={() => animate(1, 1)}
-      style={style}
-      android_ripple={{ color: colors.primaryContainer }}
+      style={[style, Platform.OS === 'web' && styles.webPressableReset]}
+      android_ripple={{ color: theme.colors.primaryContainer }}
     >
       <Animated.View style={[styles.animatedContent, contentStyle, { opacity, transform: [{ scale }] }]}>{children}</Animated.View>
     </Pressable>
@@ -153,7 +153,7 @@ export function Input({ hasError, right, style, ref, onFocus, onBlur, ...props }
   const borderColor = hasError ? theme.colors.error : focused ? theme.colors.outlineFocused : theme.colors.outline;
 
   return (
-    <View style={[styles.inputBox, { borderColor }, hasError && styles.inputError, focused && styles.inputFocused, disabled && styles.disabledInput]}>
+    <View style={[styles.inputBox, { borderColor, backgroundColor: disabled ? theme.colors.surfaceVariant : theme.colors.surface }, hasError && styles.inputError, focused && styles.inputFocused, disabled && styles.disabledInput]}>
       <TextInput
         ref={ref}
         placeholderTextColor={theme.colors.textSecondary}
@@ -241,7 +241,7 @@ export function PickerButton({ text, placeholder, onPress, onClear, hasError }: 
 }) {
   const { theme } = useTheme();
   return (
-    <View style={[styles.inputBox, { borderColor: hasError ? theme.colors.error : theme.colors.outline }]}>
+    <View style={[styles.inputBox, { backgroundColor: theme.colors.surface, borderColor: hasError ? theme.colors.error : theme.colors.outline }]}>
       <AnimatedPressable onPress={onPress} style={styles.pickerAction} contentStyle={styles.pickerContent}>
         <Text style={[styles.pickerText, { color: text ? theme.colors.textPrimary : theme.colors.textSecondary }]} numberOfLines={1}>
           {text || placeholder}
@@ -286,7 +286,7 @@ export function OptionPicker({ value, options, onChange, placeholder = 'Select',
 
   return (
     <>
-      <AnimatedPressable onPress={toggle} style={[styles.inputBox, styles.picker, { borderColor: hasError ? theme.colors.error : theme.colors.outline }]} contentStyle={styles.pickerContent} accessibilityState={{ disabled: false, selected: open }}>
+      <AnimatedPressable onPress={toggle} style={[styles.inputBox, styles.picker, { backgroundColor: theme.colors.surface, borderColor: hasError ? theme.colors.error : theme.colors.outline }]} contentStyle={styles.pickerContent} accessibilityState={{ disabled: false, selected: open }}>
         <Text style={[styles.pickerText, { color: selected ? theme.colors.textPrimary : theme.colors.textSecondary }]} numberOfLines={1}>
           {selected?.label ?? placeholder}
         </Text>
@@ -294,10 +294,16 @@ export function OptionPicker({ value, options, onChange, placeholder = 'Select',
       </AnimatedPressable>
 
       {open && (
-        <Animated.View ref={dropdownRef} onLayout={revealIfCutOff} style={[styles.dropdown, { borderColor: theme.colors.outline, opacity: menuOpacity }]}>
+        <Animated.View ref={dropdownRef} onLayout={revealIfCutOff} style={[styles.dropdown, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline, opacity: menuOpacity }]}>
           {options.length >= SEARCH_MIN_OPTIONS && (
             <View style={styles.dropdownSearch}>
-              <Input placeholder="Search options" value={search} onChangeText={setSearch} autoCorrect={false} />
+              <Input
+                placeholder="Search options"
+                value={search}
+                onChangeText={setSearch}
+                autoCorrect={false}
+                right={<Ionicons name="search-outline" size={componentTokens.iconSize.medium} color={theme.colors.textSecondary} />}
+              />
             </View>
           )}
           <ScrollView style={{ maxHeight: componentTokens.menu.maxHeight }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
@@ -312,7 +318,8 @@ export function OptionPicker({ value, options, onChange, placeholder = 'Select',
             ))}
           </ScrollView>
           {value ? (
-            <AnimatedPressable onPress={() => { onChange(''); close(); }} style={[styles.dropdownClear, { borderTopColor: theme.colors.outline }]}>
+            <AnimatedPressable onPress={() => { onChange(''); close(); }} style={[styles.dropdownClear, { borderTopColor: theme.colors.outline }]} contentStyle={styles.dropdownClearContent}>
+              <Ionicons name="close-circle-outline" size={componentTokens.iconSize.medium} color={theme.colors.primary} />
               <Text style={[styles.link, { color: theme.colors.primary }]}>Clear selection</Text>
             </AnimatedPressable>
           ) : null}
@@ -343,13 +350,13 @@ const styles = StyleSheet.create({
     borderWidth: componentTokens.card.borderWidth,
     borderRadius: componentTokens.input.radius,
     paddingHorizontal: componentTokens.input.horizontalPadding,
-    backgroundColor: colors.surface,
   },
   inputFocused: { borderWidth: componentTokens.focusRing.width },
   inputText: { flex: 1, paddingVertical: componentTokens.input.verticalPadding, borderWidth: 0, backgroundColor: 'transparent', ...typography.body },
   webInputReset: { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent', boxShadow: 'none' } as any,
+  webPressableReset: { outlineStyle: 'none', outlineWidth: 0, outlineColor: 'transparent', boxShadow: 'none' } as any,
   inputError: { borderWidth: componentTokens.focusRing.width },
-  disabledInput: { opacity: motion.opacity.disabled, backgroundColor: colors.surfaceVariant },
+  disabledInput: { opacity: motion.opacity.disabled },
   picker: { paddingVertical: spacing.sm, gap: spacing.sm },
   pickerContent: { flexDirection: 'row', alignItems: 'center', width: '100%', gap: spacing.sm },
   pickerAction: { flex: 1, minHeight: componentTokens.input.height - spacing.sm * 2 },
@@ -365,9 +372,10 @@ const styles = StyleSheet.create({
   stateIcon: { width: componentTokens.state.iconSize, height: componentTokens.state.iconSize, borderRadius: shape.extraLarge, alignItems: 'center', justifyContent: 'center' },
   stateTitle: { ...typography.title, textAlign: 'center' },
   centerText: { ...typography.body, textAlign: 'center' },
-  dropdown: { marginTop: spacing.xs, borderWidth: componentTokens.card.borderWidth, borderRadius: shape.medium, backgroundColor: colors.surface, overflow: 'hidden', ...elevation.medium },
+  dropdown: { marginTop: spacing.xs, borderWidth: componentTokens.card.borderWidth, borderRadius: shape.medium, overflow: 'hidden', ...elevation.medium },
   dropdownSearch: { padding: spacing.sm },
   dropdownClear: { minHeight: componentTokens.menu.itemHeight, padding: spacing.md, alignItems: 'center', justifyContent: 'center', borderTopWidth: StyleSheet.hairlineWidth },
+  dropdownClearContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   link: { ...typography.body, fontWeight: '600' },
   option: { minHeight: componentTokens.menu.itemHeight, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   optionContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' },

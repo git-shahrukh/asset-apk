@@ -51,6 +51,9 @@ export const componentTokens = {
   system: {
     statusBar: 'dark' as const,
   },
+  navigation: {
+    logoutIconSize: 36,
+  },
   menu: {
     maxHeight: 240,
     itemHeight: 48,

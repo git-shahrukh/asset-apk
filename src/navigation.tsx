@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from './auth/authStore';
@@ -8,7 +9,7 @@ import { BlocksScreen } from './screens/BlocksScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { RecordFormScreen } from './screens/RecordFormScreen';
 import  OcrTestScreen  from './utils/OcrTestScreen';
-import { spacing, typography, useTheme } from './theme';
+import { componentTokens, spacing, typography, useTheme } from './theme';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -20,7 +21,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function Navigation() {
-  const { theme } = useTheme();
+  const { theme, isDark, toggleColorScheme } = useTheme();
   const status = useAuth((s) => s.status);
   const restore = useAuth((s) => s.restore);
   const logout = useAuth((s) => s.logout);
@@ -34,7 +35,7 @@ export function Navigation() {
   return (
     <NavigationContainer theme={{
       ...DefaultTheme,
-      dark: false,
+      dark: isDark,
       colors: {
         ...DefaultTheme.colors,
         primary: theme.colors.primary,
@@ -61,9 +62,18 @@ export function Navigation() {
               options={{
                 title: 'Asset Management',
                 headerRight: () => (
-                  <AnimatedPressable onPress={logout} accessibilityLabel="Log out" style={{ padding: spacing.sm }}>
-                    <Text style={{ color: theme.colors.primary, ...typography.label }}>Log out</Text>
-                  </AnimatedPressable>
+                  <View style={styles.headerActions}>
+                    <AnimatedPressable
+                      onPress={toggleColorScheme}
+                      accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                      style={styles.iconButton}
+                    >
+                      <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={20} color={theme.colors.primary} />
+                    </AnimatedPressable>
+                    <AnimatedPressable onPress={logout} accessibilityLabel="Log out" style={styles.iconButton}>
+                      <Ionicons name="log-out-outline" size={20} color={theme.colors.primary} />
+                    </AnimatedPressable>
+                  </View>
                 ),
               }}
             />
@@ -81,3 +91,18 @@ export function Navigation() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  iconButton: {
+    minWidth: componentTokens.touchTarget.minimum,
+    minHeight: componentTokens.touchTarget.minimum,
+    padding: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

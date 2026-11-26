@@ -27,5 +27,5 @@ export function ScanButton({ onScan }: { onScan: (text: string, lines: OcrLine[]
     }
   };
 
-  return <Button title="Scan nameplate" onPress={scan} loading={busy} />;
+  return <Button title="Scan nameplate" onPress={scan} loading={busy} icon="scan-outline" />;
 }

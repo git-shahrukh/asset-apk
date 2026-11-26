@@ -347,7 +347,7 @@ export function LocationField({ value, onChange, onBlur, hasError, inputRef, onC
         </View>
       )}
 
-      <Button title="Find on map" onPress={findOnMap} loading={searching} disabled={!place.location.trim()} />
+      <Button title="Find on map" onPress={findOnMap} loading={searching} disabled={!place.location.trim()} icon="map-outline" />
       {message ? <Text style={[styles.message, { color: theme.colors.error }]}>{message}</Text> : null}
 
       <View style={[styles.map, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}>

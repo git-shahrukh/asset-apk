@@ -4,7 +4,7 @@
     "slug": "asset-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/app-icon.png",
+    "icon": "./assets/app logo.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -14,14 +14,14 @@
       "package": "com.endureva.assetapp",
       "adaptiveIcon": {
         "backgroundColor": "#1A73E8",
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/app logo.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+    "favicon": "./assets/app logo.png"
     },
     "plugins": [
       "expo-secure-store",

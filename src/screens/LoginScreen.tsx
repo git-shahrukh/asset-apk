@@ -9,7 +9,7 @@ import { componentTokens, elevation, shape, spacing, typography, useTheme } from
 type Errors = { username?: string; password?: string; form?: string };
 
 export function LoginScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark, toggleColorScheme } = useTheme();
   const login = useAuth((s) => s.login);
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -49,9 +49,22 @@ export function LoginScreen() {
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={styles.modeToggleRow}>
+            <AnimatedPressable
+              onPress={toggleColorScheme}
+              accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              style={styles.modeToggle}
+            >
+              <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={componentTokens.iconSize.medium} color={theme.colors.primary} />
+            </AnimatedPressable>
+          </View>
           <View style={styles.header}>
             <View style={[styles.logoFrame, { backgroundColor: theme.colors.primaryContainer }]}>
-              <Image source={require('../../assets/icon.png')} style={styles.logo} />
+              <Image
+                source={require('../../assets/app-logo-transparent.png')}
+                style={[styles.logo, isDark && { tintColor: theme.colors.onPrimaryContainer }]}
+                resizeMode="contain"
+              />
             </View>
             <Text style={[styles.appName, { color: theme.colors.textPrimary }]}>Asset Management</Text>
             <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>Sign in to track and manage your assets</Text>
@@ -124,8 +137,10 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
+  modeToggleRow: { width: '100%', alignItems: 'flex-end', marginBottom: spacing.sm },
+  modeToggle: { minWidth: componentTokens.touchTarget.minimum, minHeight: componentTokens.touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: spacing.xxl },
-  logoFrame: { width: componentTokens.brand.frameSize, height: componentTokens.brand.frameSize, borderRadius: shape.extraLarge, marginBottom: spacing.lg, alignItems: 'center', justifyContent: 'center' },
+  logoFrame: { width: componentTokens.brand.frameSize, height: componentTokens.brand.frameSize, borderRadius: shape.extraLarge, marginBottom: spacing.lg, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   logo: { width: componentTokens.brand.logoSize, height: componentTokens.brand.logoSize, borderRadius: shape.large },
   appName: { ...typography.headline, textAlign: 'center' },
   subtitle: { ...typography.bodySmall, marginTop: spacing.sm, textAlign: 'center' },
