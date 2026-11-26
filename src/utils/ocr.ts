@@ -1,4 +1,5 @@
 import { extractTextFromImage } from 'expo-text-extractor';
+import { componentTokens } from '../theme';
 
 export interface OcrLine {
   text: string;
@@ -12,7 +13,7 @@ export async function readLines(uri: string): Promise<OcrLine[]> {
     text: text.replace(/\s+/g, ' ').trim(),
     top: index * 12,
     left: 0,
-    height: 10,
+    height: componentTokens.ocr.lineHeight,
   }));
   // read top to bottom, then left to right
   return lines.filter((l) => l.text).sort((a, b) => a.top - b.top || a.left - b.left);

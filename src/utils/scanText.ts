@@ -68,6 +68,7 @@
 
 import { launchCameraAsync, requestCameraPermissionsAsync } from 'expo-image-picker';
 import { extractTextFromImage, isSupported } from 'expo-text-extractor';
+import { componentTokens } from '../theme';
 
 export interface ScanLine {
   text: string;
@@ -104,7 +105,7 @@ export async function scanText(): Promise<ScanResult | null> {
         text: text.replace(/\s+/g, ' ').trim(),
         top: index * 12,
         left: 0,
-        height: 10,
+        height: componentTokens.ocr.lineHeight,
       }))
       .filter((line) => line.text);
 

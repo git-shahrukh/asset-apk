@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { launchCameraAsync, launchImageLibraryAsync, requestCameraPermissionsAsync } from 'expo-image-picker';
-import TextRecognition from '@react-native-ml-kit/text-recognition';
+import { extractTextFromImage, isSupported } from 'expo-text-extractor';
 import { Button, EmptyView, FormItem, Surface, showPopup } from '../components/ui';
 import { componentTokens, shape, spacing, typography, useTheme } from '../theme';
 
@@ -39,15 +39,17 @@ export default function OcrTestScreen() {
     setUri(photo.assets[0].uri);
     setBusy(true);
     try {
+      if (!isSupported) throw new Error('Text scanning is not supported on this device.');
       const start = Date.now();
-      const result = await TextRecognition.recognize(photo.assets[0].uri);
+      const recognized = await extractTextFromImage(photo.assets[0].uri);
+      const text = recognized.join('\n');
       setMs(Date.now() - start);
-      setFullText(result.text);
-      setDescription(result.text);
-      const parsed = parseNameplate(result.text);
+      setFullText(text);
+      setDescription(text);
+      const parsed = parseNameplate(text);
       setModel(parsed.model);
       setSpecification(parsed.specification);
-      setLines(result.blocks.flatMap((b) => b.lines.map((l) => ({ text: l.text, top: l.frame?.top ?? 0, left: l.frame?.left ?? 0 }))));
+      setLines(recognized.map((line, index) => ({ text: line, top: index * 12, left: 0 })));
       if (__DEV__) console.log('OCR parsed field names:', Object.keys(parsed));
     } catch (e) {
       showPopup('Scan failed', String(e));

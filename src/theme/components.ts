@@ -48,6 +48,9 @@ export const componentTokens = {
   location: {
     mapHeight: 280,
   },
+  ocr: {
+    lineHeight: 10,
+  },
   system: {
     statusBar: 'dark' as const,
   },
