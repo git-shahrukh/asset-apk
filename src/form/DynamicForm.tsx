@@ -5,7 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ApiError } from '../api/client';
 import { Field, FormValues, Place } from '../api/types';
-import { Button, FormItem, colors,revealFocusedInput,showPopup  } from '../components/ui';
+import { Button, FormItem, Surface, revealFocusedInput, showPopup } from '../components/ui';
+import { componentTokens, elevation, spacing, typography, useTheme } from '../theme';
 import { TEXT_MAX_LENGTH, UnsupportedField, fieldComponents } from './fieldComponents';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { ScanError, scanText } from '../utils/scanText';
@@ -92,7 +93,10 @@ function fieldSchema(field: Field) {
 
 
     default:
-      return null; // unsupported type: not validated and not submitted
+      // Do not allow a required backend field to disappear silently.
+      return field.required
+        ? z.any().refine(() => false, `${field.label} uses unsupported field type "${field.type}"`)
+        : null;
   }
 }
 
@@ -124,6 +128,7 @@ interface Props {
 }
 
 export function DynamicForm({ fields, initialValues, submitLabel, onSubmit }: Props) {
+  const { theme } = useTheme();
   const schema = useMemo(() => buildSchema(fields), [fields]);
   const { control, handleSubmit, setError, setFocus, setValue, formState: { isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
@@ -174,33 +179,33 @@ export function DynamicForm({ fields, initialValues, submitLabel, onSubmit }: Pr
   }, (errors) => goToFirstError((id) => !!errors[id]))();
 
 
- // ---------- state Scan label with OCR ----------
+  // ---------- Scan label with OCR ----------
   const [scanning, setScanning] = useState(false);
 
-const scanLabel = async () => {
-  setScanning(true);
-  try {
-    const scan = await scanText();
-    if (!scan) return;
+  const scanLabel = async () => {
+    setScanning(true);
+    try {
+      const scan = await scanText();
+      if (!scan) return;
 
-    const parsed = parseScan(scan.lines, fields);
-    console.log('MATCHED:', parsed.values, '| description field id:', parsed.descriptionId);
+      const parsed = parseScan(scan.lines, fields);
+      if (__DEV__) console.log('OCR matched field ids:', Object.keys(parsed.values));
 
-    const opts = { shouldDirty: true, shouldTouch: true, shouldValidate: true };
-    for (const [id, value] of Object.entries(parsed.values)) setValue(id, value, opts);
+      const opts = { shouldDirty: true, shouldTouch: true, shouldValidate: true };
+      for (const [id, value] of Object.entries(parsed.values)) setValue(id, value, opts);
 
-    if (parsed.description && parsed.descriptionId) {
-      setValue(parsed.descriptionId, parsed.description, opts);
+      if (parsed.description && parsed.descriptionId) {
+        setValue(parsed.descriptionId, parsed.description, opts);
+      }
+      if (!Object.keys(parsed.values).length) {
+        showPopup('Nothing matched', 'No labels recognised. Unmatched text went to Description.');
+      }
+    } catch (e) {
+      showPopup('Scan failed', e instanceof ScanError ? e.message : String(e));
+    } finally {
+      setScanning(false);
     }
-    if (!Object.keys(parsed.values).length) {
-      showPopup('Nothing matched', 'No labels recognised. Unmatched text went to Description.');
-    }
-  } catch (e) {
-    showPopup('Scan failed', e instanceof ScanError ? e.message : String(e));
-  } finally {
-    setScanning(false);
-  }
-};
+  };
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={headerHeight}>
       <FlatList
@@ -213,25 +218,30 @@ const scanLabel = async () => {
         }}
         data={fields}
         keyExtractor={(f) => f.id}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { backgroundColor: theme.colors.background }]}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item, index }) => (
           <FieldRow field={item} index={index} control={control} onReveal={revealRow} onCoordinates={fillCoordinates} />
         )}
         ListFooterComponent={
           <View>
-            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-            <Button title={submitLabel} onPress={submit} loading={isSubmitting} />
+            {formError ? (
+              <Surface style={[styles.formErrorCard, { backgroundColor: theme.colors.errorContainer }]}>
+                <Text style={[styles.formError, { color: theme.colors.onErrorContainer }]}>{formError}</Text>
+              </Surface>
+            ) : null}
+            <Button title={submitLabel} onPress={submit} loading={isSubmitting} icon="checkmark" />
           </View>
         }
-        
         ListHeaderComponent={
-  Platform.OS !== 'web' ? (
-    <View style={{ marginBottom: 16 }}>
-      <Button title="Scan label" onPress={scanLabel} loading={scanning} />
-    </View>
-  ) : undefined
-}
+          Platform.OS !== 'web' ? (
+            <Surface style={styles.scanCard} outlined>
+              <Text style={[styles.scanTitle, { color: theme.colors.textPrimary }]}>Quick fill with OCR</Text>
+              <Text style={[styles.scanDescription, { color: theme.colors.textSecondary }]}>Scan an equipment label to pre-fill matching fields.</Text>
+              <Button title="Scan label" onPress={scanLabel} loading={scanning} variant="tonal" icon="scan-outline" />
+            </Surface>
+          ) : undefined
+        }
       />
     </KeyboardAvoidingView>
   );
@@ -266,6 +276,10 @@ const FieldRow = memo(function FieldRow({ field, index, control, onReveal, onCoo
 });
 
 const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 40, backgroundColor: colors.bg, flexGrow: 1 },
-  formError: { color: colors.danger, marginBottom: 8, textAlign: 'center' },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
+  scanCard: { marginBottom: spacing.lg, padding: spacing.lg, ...elevation.low },
+  scanTitle: { ...typography.title },
+  scanDescription: { ...typography.bodySmall, marginTop: spacing.xs },
+  formErrorCard: { padding: spacing.md, marginBottom: spacing.sm, borderRadius: componentTokens.card.radius, ...elevation.none },
+  formError: { ...typography.bodySmall, textAlign: 'center' },
 });

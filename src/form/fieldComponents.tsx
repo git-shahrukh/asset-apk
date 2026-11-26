@@ -2,7 +2,8 @@ import { ComponentType } from 'react';
 import { Text } from 'react-native';
 import type { RefCallBack } from 'react-hook-form';
 import { Field } from '../api/types';
-import { Input, OptionPicker, colors } from '../components/ui';
+import { Input, OptionPicker } from '../components/ui';
+import { useTheme } from '../theme';
 import { RelationshipField } from './RelationshipField';
 import { AttachmentField } from './AttachmentField';
 import { DateField } from './DateField';
@@ -93,7 +94,8 @@ function SelectField({ field, value, onChange, onBlur, hasError, onReveal }: Fie
 }
 
 export function UnsupportedField({ field }: FieldProps) {
-  return <Text style={{ color: colors.muted }}>{`Field type "${field.type}" is not supported yet.`}</Text>;
+  const { theme } = useTheme();
+  return <Text style={{ color: theme.colors.textSecondary }}>{`Field type "${field.type}" is not supported yet.`}</Text>;
 }
 
 // Backend `type` → component. To support a new type, add one line here.
